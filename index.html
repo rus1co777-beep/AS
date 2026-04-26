@@ -1,128 +1,184 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>AE — Assassin Energy HQ</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
-<style>
-:root{--bg:#050508;--bg2:#0a0a14;--accent:#00ccff;--text:#e0f7ff;--border:rgba(0,204,255,0.2)}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:sans-serif;padding-bottom:80px}
-#auth-screen{position:fixed;inset:0;background:var(--bg);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px}
-.card{background:var(--bg2);border:1px solid var(--border);padding:25px;border-radius:15px;text-align:center;width:100%;max-width:320px}
-.header{position:sticky;top:0;z-index:1000;background:rgba(5,5,8,0.9);backdrop-filter:blur(10px);padding:12px;border-bottom:1px solid var(--border)}
-#map{height:450px;width:100%;border-bottom:1px solid var(--border)}
-.btn{background:var(--accent);color:#000;border:none;padding:15px;border-radius:10px;font-weight:bold;width:100%;margin-top:10px;text-transform:uppercase;cursor:pointer}
-.nav{position:fixed;bottom:0;width:100%;background:var(--bg2);display:flex;padding:15px;border-top:1px solid var(--border);z-index:1000}
-input{width:100%;padding:12px;margin-bottom:10px;background:#000;border:1px solid var(--border);color:#fff;border-radius:8px;outline:none}
-.leaflet-routing-container{background:var(--bg2)!important;color:#fff!important;font-size:10px!important;max-width:200px!important}
-.leaflet-control-geocoder{background:var(--bg2)!important;color:#fff!important;border:1px solid var(--accent)!important}
-.leaflet-control-geocoder-icon{filter:invert(1)}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AE — Assassin Energy HQ (React)</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map { height: 100%; width: 100%; z-index: 1; }
+        .leaflet-popup-content-wrapper { background: #111827; color: white; border: 1px solid #06b6d4; }
+        .leaflet-popup-tip { background: #06b6d4; }
+    </style>
 </head>
 <body>
+    <div id="root"></div>
 
-<div id="auth-screen">
-  <div class="card">
-    <h2 id="auth-title" style="margin-bottom:20px;letter-spacing:2px">ВХОД В СИСТЕМУ</h2>
-    <input id="l" placeholder="ЛОГИН">
-    <input id="p" type="password" placeholder="ПАРОЛЬ">
-    <button class="btn" id="auth-btn" onclick="auth()">ПОДКЛЮЧИТЬСЯ</button>
-    <p id="auth-toggle" onclick="toggleMode()" style="font-size:10px;color:var(--accent);margin-top:15px;cursor:pointer">НОВЫЙ АГЕНТ? РЕГИСТРАЦИЯ</p>
-  </div>
-</div>
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
 
-<div class="header">
-<div style="display:flex;justify-content:space-between"><b>AE <span style="color:var(--accent)">HQ</span></b><span id="bat">--% ⚡</span></div>
-<div style="font-size:10px;margin-top:5px;color:var(--accent)" id="lvl">LVL 1 RECRUIT</div>
-</div>
+        // Иконка узла
+        const socketIcon = L.icon({
+            iconUrl: 'https://cdn-icons-png.flaticon.com/512/2903/2903541.png',
+            iconSize: [36, 36],
+            iconAnchor: [18, 36],
+        });
 
-<div id="map"></div>
+        // Основной компонент приложения
+        function App() {
+            const [user, setUser] = useState(localStorage.getItem('ae_u'));
+            const [myPos, setMyPos] = useState(null);
+            const [nodes, setNodes] = useState([]);
+            const [xp, setXp] = useState(0);
+            const [addMode, setAddMode] = useState(false);
+            const [pendingCoords, setPendingCoords] = useState(null);
+            const [map, setMap] = useState(null);
 
-<div style="padding:15px">
-<button class="btn" onclick="document.getElementById('f').click()">📸 ЗАСЕЧЬ УЗЕЛ (+100 XP)</button>
-<input type="file" id="f" accept="image/*" capture="environment" hidden onchange="up(this)">
-<div id="list" style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:15px"></div>
-</div>
+            // Загрузка данных
+            useEffect(() => {
+                if (user) {
+                    const data = JSON.parse(localStorage.getItem(`ae_d_${user}`)) || { xp: 0, nodes: [] };
+                    setNodes(data.nodes);
+                    setXp(data.xp);
+                }
+            }, [user]);
 
-<div class="nav"><div style="flex:1;text-align:center;color:var(--accent);font-weight:bold;font-size:12px">АКТИВНАЯ СЕТКА</div></div>
+            // Сохранение данных
+            useEffect(() => {
+                if (user) {
+                    localStorage.setItem(`ae_d_${user}`, JSON.stringify({ xp, nodes }));
+                }
+            }, [nodes, xp, user]);
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
-<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
-<script>
-let isReg = false;
-let myPos = null;
-let routingControl = null;
+            // Инициализация карты
+            useEffect(() => {
+                if (user && !map) {
+                    const m = L.map('map', { zoomControl: false }).setView([55.75, 37.61], 13);
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(m);
+                    
+                    m.on('click', (e) => {
+                        // Логика клика передается через стейт ниже
+                        window.lastClick = [e.latlng.lat, e.latlng.lng];
+                    });
 
-function toggleMode() {
-  isReg = !isReg;
-  document.getElementById('auth-title').innerText = isReg ? "РЕГИСТРАЦИЯ" : "ВХОД В СИСТЕМУ";
-  document.getElementById('auth-btn').innerText = isReg ? "СОЗДАТЬ АГЕНТА" : "ПОДКЛЮЧИТЬСЯ";
-  document.getElementById('auth-toggle').innerText = isReg ? "УЖЕ ЕСТЬ АККАУНТ? ВХОД" : "НОВЫЙ АГЕНТ? РЕГИСТРАЦИЯ";
-}
+                    // GPS слежение
+                    m.locate({ setView: true, maxZoom: 16, watch: true });
+                    m.on('locationfound', (e) => setMyPos([e.latlng.lat, e.latlng.lng]));
+                    
+                    setMap(m);
+                }
+            }, [user]);
 
-function auth(){
-  let l=document.getElementById('l').value;
-  if(l){localStorage.setItem('ae_u',l);location.reload()}
-}
+            // Отрисовка маркеров
+            useEffect(() => {
+                if (map) {
+                    map.eachLayer((layer) => { if (layer instanceof L.Marker && layer.options.icon !== undefined) map.removeLayer(layer); });
+                    nodes.forEach(node => {
+                        const marker = L.marker(node.coords, { icon: socketIcon }).addTo(map);
+                        marker.bindPopup(`
+                            <div class="p-2">
+                                <p class="font-bold mb-2">${node.description}</p>
+                                <button onclick="window.deleteNode('${node.id}')" class="bg-red-500 text-white px-2 py-1 rounded text-xs">УДАЛИТЬ</button>
+                            </div>
+                        `);
+                    });
+                }
+            }, [nodes, map]);
 
-let cur=localStorage.getItem('ae_u');
-if(cur){document.getElementById('auth-screen').style.display='none';}
+            window.deleteNode = (id) => {
+                setNodes(prev => prev.filter(n => n.id !== id));
+            };
 
-const dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png');
-const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+            const handleMapClick = () => {
+                if (window.lastClick) {
+                    if (addMode) setPendingCoords(window.lastClick);
+                    else {
+                        if (myPos) window.open(`https://www.google.com/maps/dir/${myPos[0]},${myPos[1]}/${window.lastClick[0]},${window.lastClick[1]}`, '_blank');
+                        else alert("Жду сигнал GPS...");
+                    }
+                    window.lastClick = null;
+                }
+            };
 
-const map = L.map('map', {center: [55.75, 37.61], zoom: 13, layers: [dark], zoomControl: false});
+            const saveNode = (desc) => {
+                const newNode = { id: Date.now().toString(), coords: pendingCoords, description: desc };
+                setNodes([...nodes, newNode]);
+                setXp(xp + 100);
+                setPendingCoords(null);
+                setAddMode(false);
+            };
 
-L.control.layers({"Сетка": dark, "Спутник": satellite}).addTo(map);
-L.Control.geocoder({defaultMarkGeocode: true, placeholder: "Поиск узла..."}).addTo(map);
+            if (!user) return (
+                <div className="h-screen bg-black flex items-center justify-center p-6">
+                    <div className="w-full max-w-xs bg-gray-900 border border-cyan-500/30 p-6 rounded-2xl text-center">
+                        <h2 className="text-cyan-400 font-bold tracking-widest mb-6">AE - ASSASSIN</h2>
+                        <input id="loginInput" placeholder="ЛОГИН" className="w-full bg-black border border-cyan-900 p-3 rounded-xl mb-4 text-white outline-none focus:border-cyan-500" />
+                        <button onClick={() => {
+                            const val = document.getElementById('loginInput').value;
+                            if(val) { localStorage.setItem('ae_u', val); setUser(val); }
+                        }} className="w-full bg-cyan-500 py-3 rounded-xl font-bold text-black uppercase">Подключиться</button>
+                    </div>
+                </div>
+            );
 
-function goTo(lat, lng) {
-  if (!myPos) return alert("Жду сигнал GPS...");
-  if (routingControl) map.removeControl(routingControl);
-  routingControl = L.Routing.control({
-    waypoints: [L.latLng(myPos.lat, myPos.lng), L.latLng(lat, lng)],
-    lineOptions: {styles: [{color: '#00ccff', weight: 5}]},
-    createMarker: () => null
-  }).addTo(map);
-}
+            const level = Math.floor(Math.sqrt(xp / 100)) + 1;
 
-map.locate({setView: true, maxZoom: 16, watch: true});
-map.on('locationfound', e => {
-  myPos = e.latlng;
-  L.circle(e.latlng, {radius: 10, color: '#00ccff'}).addTo(map);
-});
+            return (
+                <div className="h-screen flex flex-col bg-black overflow-hidden" onClick={handleMapClick}>
+                    {/* Header */}
+                    <div className="p-4 bg-black/90 border-b border-cyan-500/20 flex justify-between items-center z-10">
+                        <div>
+                            <div className="text-cyan-400 font-bold">AE <span className="text-white">HQ</span></div>
+                            <div className="text-[10px] text-cyan-600 uppercase tracking-tighter">Agent: {user}</div>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-xs font-mono">LVL {level} | XP {xp}</div>
+                            <button onClick={() => { localStorage.removeItem('ae_u'); location.reload(); }} className="text-[10px] text-gray-500 uppercase">Выйти</button>
+                        </div>
+                    </div>
 
-map.on('click', e => {
-  L.popup().setLatLng(e.latlng).setContent(`<button onclick="goTo(${e.latlng.lat}, ${e.latlng.lng})" style="background:#00ccff;border:none;padding:5px 10px;border-radius:5px;font-weight:bold">ПРОЛОЖИТЬ ПУТЬ</button>`).openOn(map);
-});
+                    {/* Map Area */}
+                    <div className="flex-1 relative">
+                        <div id="map"></div>
+                        
+                        {/* Кнопка "Найти меня" */}
+                        <button onClick={() => map.locate({setView: true})} className="absolute bottom-24 right-4 z-10 bg-gray-900 border border-cyan-500/50 p-3 rounded-full shadow-lg shadow-cyan-500/20">📍</button>
+                    </div>
 
-let u = JSON.parse(localStorage.getItem('ae_d_'+cur))||{xp:0,nodes:[]};
-function up(i){
-  const r=new FileReader();
-  r.onload=(e)=>{
-    u.nodes.push({p:e.target.result});u.xp+=100;
-    localStorage.setItem('ae_d_'+cur,JSON.stringify(u));
-    update();
-  };
-  r.readAsDataURL(i.files[0]);
-}
+                    {/* Bottom Control */}
+                    <div className="p-4 bg-black border-t border-cyan-900/50 z-10">
+                        <button 
+                            onClick={() => setAddMode(!addMode)}
+                            className={`w-full py-4 rounded-2xl font-bold uppercase transition-all ${addMode ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/20'}`}
+                        >
+                            {addMode ? 'Отмена (нажми на карту)' : 'Добавить узел'}
+                        </button>
+                    </div>
 
-function update(){
-  let l=Math.floor(Math.sqrt(u.xp/100))+1;
-  document.getElementById('lvl').innerText='LVL '+l+' AGENT | XP: '+u.xp;
-  document.getElementById('list').innerHTML=u.nodes.map(n=>`<img src="${n.p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:5px;border:1px solid var(--border)">`).join('');
-}
-update();
+                    {/* Modal */}
+                    {pendingCoords && (
+                        <div className="fixed inset-0 z-[2000] bg-black/80 backdrop-blur flex items-center justify-center p-6">
+                            <div className="w-full max-w-xs bg-gray-900 border border-cyan-500 p-6 rounded-2xl">
+                                <h3 className="text-cyan-400 font-bold mb-4">Описание узла</h3>
+                                <input id="descIn" autoFocus className="w-full bg-black border border-cyan-900 p-3 rounded-xl text-white mb-4 outline-none" placeholder="Напр: Электрощит" />
+                                <div className="flex gap-2">
+                                    <button onClick={() => saveNode(document.getElementById('descIn').value)} className="flex-1 bg-cyan-500 py-2 rounded-xl font-bold text-black">ОК</button>
+                                    <button onClick={() => setPendingCoords(null)} className="flex-1 bg-gray-700 py-2 rounded-xl text-white">ОТМЕНА</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
 
-navigator.getBattery().then(b=>{
-  const r=()=>document.getElementById('bat').innerText=Math.round(b.level*100)+'% ⚡';
-  b.onlevelchange=r; r();
-});
-</script>
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>
