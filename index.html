@@ -2,126 +2,108 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>AE — Assassin Energy HQ</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
 <style>
-:root {
-  --bg: #050508; --bg2: #0a0a14; --bg3: #0f0f1c;
-  --accent: #00ccff; --accent-glow: rgba(0,204,255,0.35);
-  --danger: #ff3c5a; --success: #00ffaa;
-  --text: #e0f7ff; --muted: #4a6070;
-  --border: rgba(0,204,255,0.18); --radius: 14px;
-  --font-mono: 'Space Mono', monospace; --font-main: 'Syne', sans-serif;
-}
-* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-body { background: var(--bg); color: var(--text); font-family: var(--font-main); min-height: 100dvh; padding-bottom: 80px; overflow-x: hidden; }
-#auth-screen { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.auth-card { width: 100%; max-width: 320px; background: var(--bg2); border: 1px solid var(--border); padding: 30px; border-radius: 20px; text-align: center; }
-.header { position: sticky; top: 0; z-index: 500; background: rgba(5,5,8,0.92); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); padding: 10px 16px; }
-.header-top { display: flex; justify-content: space-between; align-items: center; }
-.xp-container { margin-top: 8px; background: rgba(0,204,255,0.05); height: 6px; border-radius: 3px; overflow: hidden; border: 0.5px solid var(--border); }
-#xp-bar { width: 0%; height: 100%; background: var(--accent); box-shadow: 0 0 10px var(--accent); transition: width 0.5s ease; }
-.awards-row { display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
-.award-badge { min-width: 32px; height: 32px; border-radius: 8px; background: var(--bg3); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 16px; opacity: 0.2; grayscale: 100%; transition: 0.4s; }
-.award-badge.unlocked { opacity: 1; grayscale: 0%; border-color: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
-#map { height: 260px; width: calc(100% + 32px); margin: 12px -16px 0; border-top: 1px solid var(--border); }
-.search-input { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; color: var(--text); font-family: var(--font-mono); font-size: 12px; outline: none; width: 100%; }
-.view { display: none; padding: 0 16px; animation: fadeIn 0.3s ease; }
-.view.active { display: block; }
-.stat-card { background: var(--bg2); border: 1px solid var(--border); padding: 20px; border-radius: var(--radius); text-align: center; margin-top: 15px; }
-.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(10,10,20,0.96); border-top: 1px solid var(--border); display: flex; padding: 8px 0; z-index: 500; }
-.nav-item { flex: 1; text-align: center; opacity: 0.4; }
-.nav-item.active { opacity: 1; color: var(--accent); }
-.toast { position: fixed; top: 160px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #000; padding: 8px 16px; border-radius: 20px; font-size: 10px; font-weight: 800; z-index: 11000; opacity: 0; pointer-events: none; transition: 0.3s; }
-.toast.show { opacity: 1; }
+:root{--bg:#050508;--bg2:#0a0a14;--accent:#00ccff;--text:#e0f7ff;--border:rgba(0,204,255,0.2)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:sans-serif;padding-bottom:80px}
+#auth-screen{position:fixed;inset:0;background:var(--bg);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:var(--bg2);border:1px solid var(--border);padding:25px;border-radius:15px;text-align:center;width:100%;max-width:320px}
+.header{position:sticky;top:0;z-index:1000;background:rgba(5,5,8,0.9);backdrop-filter:blur(10px);padding:12px;border-bottom:1px solid var(--border)}
+#map{height:450px;width:100%;border-bottom:1px solid var(--border)}
+.btn{background:var(--accent);color:#000;border:none;padding:15px;border-radius:10px;font-weight:bold;width:100%;margin-top:10px;text-transform:uppercase;cursor:pointer}
+.nav{position:fixed;bottom:0;width:100%;background:var(--bg2);display:flex;padding:15px;border-top:1px solid var(--border);z-index:1000}
+input{width:100%;padding:12px;margin-bottom:10px;background:#000;border:1px solid var(--border);color:#fff;border-radius:8px;outline:none}
+.leaflet-routing-container{background:var(--bg2)!important;color:#fff!important;font-size:10px!important;max-width:200px!important}
+.leaflet-control-geocoder{background:var(--bg2)!important;color:#fff!important;border:1px solid var(--accent)!important}
+.leaflet-control-geocoder-icon{filter:invert(1)}
 </style>
 </head>
 <body>
-<div id="auth-screen"><div class="auth-card"><h2 style="margin-bottom:20px;">TERMINAL LOGIN</h2><input type="text" id="auth-login" class="search-input" placeholder="LOGIN" style="margin-bottom:10px;"><input type="password" id="auth-pass" class="search-input" placeholder="PASSCODE" style="margin-bottom:20px;"><button onclick="handleAuth()" style="width:100%; background:var(--accent); border:none; padding:15px; border-radius:12px; font-weight:800; cursor:pointer;">CONNECT</button><p onclick="toggleAuthMode()" id="auth-toggle" style="font-size:9px; color:var(--accent); margin-top:15px; cursor:pointer; text-transform:uppercase;">New agent? Register</p></div></div>
+
+<div id="auth-screen">
+  <div class="card">
+    <h2 id="auth-title" style="margin-bottom:20px;letter-spacing:2px">ВХОД В СИСТЕМУ</h2>
+    <input id="l" placeholder="ЛОГИН">
+    <input id="p" type="password" placeholder="ПАРОЛЬ">
+    <button class="btn" id="auth-btn" onclick="auth()">ПОДКЛЮЧИТЬСЯ</button>
+    <p id="auth-toggle" onclick="toggleMode()" style="font-size:10px;color:var(--accent);margin-top:15px;cursor:pointer">НОВЫЙ АГЕНТ? РЕГИСТРАЦИЯ</p>
+  </div>
+</div>
+
 <div class="header">
-  <div class="header-top"><div style="font-weight:800; font-size:16px;">AE <span style="color:var(--accent)">HQ</span></div><div style="text-align:right;"><div id="agent-rank-name" style="font-size:10px; font-weight:800;">АГЕНТ</div><div id="battLevel" style="font-size:9px; font-family:var(--font-mono); color:var(--muted);">--% ⚡</div></div></div>
-  <div class="xp-container"><div id="xp-bar"></div></div>
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;"><span style="font-family:var(--font-mono); font-size:9px; color:var(--accent);" id="rank-label">LVL 1 · RECRUIT</span><span style="font-family:var(--font-mono); font-size:9px; color:var(--muted);" id="xp-numbers">0 / 100 XP</span></div>
-  <div class="awards-row"><div class="award-badge" id="aw-1">🩸</div><div class="award-badge" id="aw-2">👣</div><div class="award-badge" id="aw-3">🛰️</div><div class="award-badge" id="aw-4">🏃</div><div class="award-badge" id="aw-5">🏆</div></div>
+<div style="display:flex;justify-content:space-between"><b>AE <span style="color:var(--accent)">HQ</span></b><span id="bat">--% ⚡</span></div>
+<div style="font-size:10px;margin-top:5px;color:var(--accent)" id="lvl">LVL 1 RECRUIT</div>
 </div>
-<div id="toast" class="toast"></div>
-<div class="view active" id="view-map">
-  <div id="map"></div>
-  <input type="file" id="nodePhotoInput" accept="image/*" capture="environment" hidden onchange="saveNodeWithPhoto(this)">
-  <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px;"><button onclick="document.getElementById('nodePhotoInput').click()" style="background:var(--accent); color:#000; border:none; padding:15px; border-radius:12px; font-weight:800; font-size:11px;">📸 ЗАСЕЧЬ УЗЕЛ (+100 XP)</button><button onclick="clearNodes()" style="background:none; border:1px solid var(--muted); color:var(--muted); padding:15px; border-radius:12px; font-weight:800; font-size:11px;">🗑️ ОЧИСТИТЬ</button></div>
-  <div id="nodeList" style="margin-top:15px; max-height:160px; overflow-y:auto;"></div>
+
+<div id="map"></div>
+
+<div style="padding:15px">
+<button class="btn" onclick="document.getElementById('f').click()">📸 ЗАСЕЧЬ УЗЕЛ (+100 XP)</button>
+<input type="file" id="f" accept="image/*" capture="environment" hidden onchange="up(this)">
+<div id="list" style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:15px"></div>
 </div>
-<div class="view" id="view-fit">
-  <div class="stat-card"><div style="font-size:36px; font-weight:800; color:var(--accent);" id="stepCount">0</div><div style="font-size:10px; color:var(--muted); font-family:var(--font-mono);">ШАГИ (+1 XP)</div></div>
-  <div class="stat-card"><div style="font-size:36px; font-weight:800; color:var(--accent);" id="totalXpDisplay">0</div><div style="font-size:10px; color:var(--muted); font-family:var(--font-mono);">ВСЕГО ОПЫТА</div></div>
-</div>
-<div class="bottom-nav">
-  <div class="nav-item active" onclick="switchV('map', this)">🗺️<div style="font-size:9px;">СЕТКА</div></div>
-  <div class="nav-item" onclick="switchV('fit', this)">🧬<div style="font-size:9px;">БИО</div></div>
-</div>
+
+<div class="nav"><div style="flex:1;text-align:center;color:var(--accent);font-weight:bold;font-size:12px">АКТИВНАЯ СЕТКА</div></div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
 <script>
-let currentUser = localStorage.getItem('ae_user');
-let isSignUpMode = false;
-const RANKS = ["Recruit", "Scout", "Infiltrator", "Assassin", "Ghost", "Elite", "Legend"];
-let userData = JSON.parse(localStorage.getItem('ae_data_' + currentUser)) || { xp: 0, steps: 0, nodes: [] };
-function addXP(amount) { userData.xp += amount; checkAwards(); updateXPUI(); saveData(); if (amount >= 100) showToast(`+${amount} XP ПОЛУЧЕНО`); }
-function updateXPUI() {
-  const level = Math.floor(Math.sqrt(userData.xp / 100)) + 1;
-  const nextLevelXp = 100 * Math.pow(level, 2);
-  const progress = ((userData.xp - (100 * Math.pow(level-1, 2))) / (nextLevelXp - (100 * Math.pow(level-1, 2)))) * 100;
-  document.getElementById('xp-bar').style.width = progress + "%";
-  document.getElementById('rank-label').textContent = `LVL ${level} · ${RANKS[Math.min(Math.floor(level/5), 6)]}`;
-  document.getElementById('xp-numbers').textContent = `${Math.floor(userData.xp)} / ${nextLevelXp} XP`;
-  document.getElementById('totalXpDisplay').textContent = Math.floor(userData.xp);
-  document.getElementById('stepCount').textContent = userData.steps;
-  checkAwards();
+let isReg = false;
+let myPos = null;
+let routingControl = null;
+
+function toggleMode() {
+  isReg = !isReg;
+  document.getElementById('auth-title').innerText = isReg ? "РЕГИСТРАЦИЯ" : "ВХОД В СИСТЕМУ";
+  document.getElementById('auth-btn').innerText = isReg ? "СОЗДАТЬ АГЕНТА" : "ПОДКЛЮЧИТЬСЯ";
+  document.getElementById('auth-toggle').innerText = isReg ? "УЖЕ ЕСТЬ АККАУНТ? ВХОД" : "НОВЫЙ АГЕНТ? РЕГИСТРАЦИЯ";
 }
-function checkAwards() {
-  if(userData.nodes.length >= 1) unlockBadge('aw-1');
-  if(userData.steps >= 100) unlockBadge('aw-2');
-  if(userData.nodes.length >= 5) unlockBadge('aw-3');
+
+function auth(){
+  let l=document.getElementById('l').value;
+  if(l){localStorage.setItem('ae_u',l);location.reload()}
 }
-function unlockBadge(id) { const el = document.getElementById(id); if(el && !el.classList.contains('unlocked')) { el.classList.add('unlocked'); showToast("НАГРАДА!"); } }
-function handleAuth() {
-  const login = document.getElementById('auth-login').value.trim();
-  const pass = document.getElementById('auth-pass').value.trim();
-  if(!login || !pass) return;
-  let users = JSON.parse(localStorage.getItem('ae_users_db')) || {};
-  if(isSignUpMode) { users[login] = btoa(pass); localStorage.setItem('ae_users_db', JSON.stringify(users)); showToast("DONE"); toggleAuthMode(); }
-  else { if(users[login] === btoa(pass)) { localStorage.setItem('ae_user', login); location.reload(); } else { showToast("ERROR"); } }
+
+let cur=localStorage.getItem('ae_u');
+if(cur){document.getElementById('auth-screen').style.display='none';}
+
+const dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png');
+const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+
+const map = L.map('map', {center: [55.75, 37.61], zoom: 13, layers: [dark], zoomControl: false});
+
+L.control.layers({"Сетка": dark, "Спутник": satellite}).addTo(map);
+L.Control.geocoder({defaultMarkGeocode: true, placeholder: "Поиск узла..."}).addTo(map);
+
+function goTo(lat, lng) {
+  if (!myPos) return alert("Жду сигнал GPS...");
+  if (routingControl) map.removeControl(routingControl);
+  routingControl = L.Routing.control({
+    waypoints: [L.latLng(myPos.lat, myPos.lng), L.latLng(lat, lng)],
+    lineOptions: {styles: [{color: '#00ccff', weight: 5}]},
+    createMarker: () => null
+  }).addTo(map);
 }
-function toggleAuthMode() { isSignUpMode = !isSignUpMode; document.getElementById('auth-toggle').textContent = isSignUpMode ? "LOGIN" : "REGISTER"; }
-const map = L.map('map', {zoomControl:false, attributionControl:false}).setView([55.75, 37.61], 13);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-function renderNodes() {
-  const list = document.getElementById('nodeList');
-  list.innerHTML = userData.nodes.map((n, i) => `<div style="background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:10px; margin-bottom:8px; display:flex; gap:10px;"><img src="${n.photo}" style="width:40px; height:40px; border-radius:5px; object-fit:cover;"><div style="flex:1; font-size:10px;"><b style="color:var(--accent)">NODE_${i+1}</b></div><button onclick="delNode(${i})" style="color:var(--danger); border:none; background:none;">✕</button></div>`).join('');
-}
-function saveNodeWithPhoto(input) {
-  const file = input.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => { const c = map.getCenter(); userData.nodes.push({lat: c.lat, lng: c.lng, photo: e.target.result}); addXP(100); renderNodes(); input.value = ''; };
-  reader.readAsDataURL(file);
-}
-let moving = false;
-window.addEventListener('devicemotion', e => {
-  const f = Math.sqrt(e.accelerationIncludingGravity.x**2 + e.accelerationIncludingGravity.y**2 + e.accelerationIncludingGravity.z**2);
-  if(f > 13 && !moving) { userData.steps++; moving = true; addXP(1); updateXPUI(); }
-  if(f < 11) moving = false;
+
+map.locate({setView: true, maxZoom: 16, watch: true});
+map.on('locationfound', e => {
+  myPos = e.latlng;
+  L.circle(e.latlng, {radius: 10, color: '#00ccff'}).addTo(map);
 });
-function saveData() { localStorage.setItem('ae_data_' + currentUser, JSON.stringify(userData)); }
-function showToast(m) { const t = document.getElementById('toast'); t.textContent = m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2000); }
-function switchV(id, el) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('view-'+id).classList.add('active');
-  el.classList.add('active');
-  if(id === 'map') setTimeout(() => map.invalidateSize(), 200);
-}
-if(currentUser) { document.getElementById('auth-screen').style.display = 'none'; document.getElementById('agent-rank-name').textContent = currentUser.toUpperCase(); updateXPUI(); renderNodes(); }
-</script>
-</body>
-</html>
+
+map.on('click', e => {
+  L.popup().setLatLng(e.latlng).setContent(`<button onclick="goTo(${e.latlng.lat}, ${e.latlng.lng})" style="background:#00ccff;border:none;padding:5px 10px;border-radius:5px;font-weight:bold">ПРОЛОЖИТЬ ПУТЬ</button>`).openOn(map);
+});
+
+let u = JSON.parse(localStorage.getItem('ae_d_'+cur))||{xp:0,nodes:[]};
+function up(i){
+  const r=new FileReader();
+  r.onload=(e)=>{
+    u.nodes.push({p:e.target.result});u.xp+=100;
+    localStorage.setItem
