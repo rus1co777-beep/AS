@@ -106,4 +106,23 @@ function up(i){
   const r=new FileReader();
   r.onload=(e)=>{
     u.nodes.push({p:e.target.result});u.xp+=100;
-    localStorage.setItem
+    localStorage.setItem('ae_d_'+cur,JSON.stringify(u));
+    update();
+  };
+  r.readAsDataURL(i.files[0]);
+}
+
+function update(){
+  let l=Math.floor(Math.sqrt(u.xp/100))+1;
+  document.getElementById('lvl').innerText='LVL '+l+' AGENT | XP: '+u.xp;
+  document.getElementById('list').innerHTML=u.nodes.map(n=>`<img src="${n.p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:5px;border:1px solid var(--border)">`).join('');
+}
+update();
+
+navigator.getBattery().then(b=>{
+  const r=()=>document.getElementById('bat').innerText=Math.round(b.level*100)+'% ⚡';
+  b.onlevelchange=r; r();
+});
+</script>
+</body>
+</html>
